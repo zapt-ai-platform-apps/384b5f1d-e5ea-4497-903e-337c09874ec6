@@ -46,6 +46,8 @@ export default function SavedReportsScreen() {
   
   const handleUseReport = (report) => {
     try {
+      console.log('Using saved report:', report.projectName);
+      
       // Store the report data in localStorage for use in the report screen
       localStorage.setItem('projectDetails', JSON.stringify(report.projectDetails));
       localStorage.setItem('issues', JSON.stringify(report.issues));
@@ -57,6 +59,23 @@ export default function SavedReportsScreen() {
       console.error('Error using saved report:', error);
       Sentry.captureException(error);
     }
+  };
+  
+  // Function to format text by replacing markdown with proper HTML
+  const formatReportText = (text) => {
+    if (!text) return '';
+    
+    // Replace markdown headings with properly styled headings
+    let formattedText = text
+      // Replace markdown bold with styled spans
+      .replace(/\*\*(.*?)\*\*/g, '<span class="font-bold">$1</span>')
+      // Replace # headings with properly styled headings
+      .replace(/^# (.*?)$/gm, '<h3 class="text-lg font-medium text-blue-700 mt-3 mb-2">$1</h3>')
+      .replace(/^## (.*?)$/gm, '<h4 class="text-base font-medium text-blue-600 mt-2 mb-1">$1</h4>')
+      // Replace newlines with breaks
+      .replace(/\n/g, '<br />');
+      
+    return formattedText;
   };
   
   return (
@@ -152,7 +171,7 @@ export default function SavedReportsScreen() {
                 <div>
                   <h3 className="text-lg font-medium text-blue-800 mb-2">Analysis and Recommendations</h3>
                   <div className="prose prose-blue max-w-none bg-gray-50 p-3 rounded-md max-h-96 overflow-y-auto">
-                    <div dangerouslySetInnerHTML={{ __html: selectedReport.reportContent.replace(/\n/g, '<br />') }} />
+                    <div dangerouslySetInnerHTML={{ __html: formatReportText(selectedReport.reportContent) }} />
                   </div>
                 </div>
               </div>

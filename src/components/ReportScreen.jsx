@@ -22,6 +22,7 @@ export default function ReportScreen() {
     // Load project details and issues from localStorage
     const storedProjectDetails = localStorage.getItem('projectDetails');
     const storedIssues = localStorage.getItem('issues');
+    const storedReport = localStorage.getItem('report');
     
     if (!storedProjectDetails || !storedIssues) {
       setError('No project details found. Please go back and enter your project information.');
@@ -33,8 +34,15 @@ export default function ReportScreen() {
       setProjectDetails(JSON.parse(storedProjectDetails));
       setIssues(JSON.parse(storedIssues));
       
-      // Generate report
-      generateReport(JSON.parse(storedProjectDetails), JSON.parse(storedIssues));
+      // Check if we already have a report in localStorage (from saved reports)
+      if (storedReport) {
+        console.log('Using existing report from localStorage');
+        setReport(storedReport);
+        setIsLoading(false);
+      } else {
+        // Generate a new report only if we don't have one
+        generateReport(JSON.parse(storedProjectDetails), JSON.parse(storedIssues));
+      }
     } catch (error) {
       console.error('Error loading data:', error);
       Sentry.captureException(error);
@@ -144,12 +152,30 @@ export default function ReportScreen() {
     navigate('/draft-communication');
   };
   
+  // Function to format text by replacing markdown with proper HTML
+  const formatReportText = (text) => {
+    if (!text) return '';
+    
+    // Replace markdown headings with properly styled headings
+    let formattedText = text
+      // Replace markdown bold with styled spans
+      .replace(/\*\*(.*?)\*\*/g, '<span class="font-bold">$1</span>')
+      // Replace # headings with properly styled headings
+      .replace(/^# (.*?)$/gm, '<h2 class="text-xl font-semibold text-blue-800 mt-4 mb-2">$1</h2>')
+      .replace(/^## (.*?)$/gm, '<h3 class="text-lg font-medium text-blue-700 mt-3 mb-2">$1</h3>')
+      .replace(/^### (.*?)$/gm, '<h4 class="text-base font-medium text-blue-600 mt-2 mb-1">$1</h4>')
+      // Replace newlines with breaks
+      .replace(/\n/g, '<br />');
+      
+    return formattedText;
+  };
+  
   if (isLoading) {
     return (
       <div className="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-md flex flex-col items-center justify-center" style={{ minHeight: "50vh" }}>
         <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500 mb-4"></div>
-        <p className="text-xl text-gray-700">Generating your report...</p>
-        <p className="text-sm text-gray-500 mt-2">This may take a moment while we analyze your contract details.</p>
+        <p className="text-xl text-gray-700">Loading your report...</p>
+        <p className="text-sm text-gray-500 mt-2">This may take a moment...</p>
       </div>
     );
   }
@@ -219,7 +245,7 @@ export default function ReportScreen() {
             <h2 className="text-xl font-semibold text-blue-800 mb-2">Analysis and Recommendations</h2>
             <div className="prose prose-blue max-w-none bg-gray-50 p-4 rounded-md">
               {report ? (
-                <div dangerouslySetInnerHTML={{ __html: report.replace(/\n/g, '<br />') }} />
+                <div dangerouslySetInnerHTML={{ __html: formatReportText(report) }} />
               ) : (
                 <p>No analysis available. Please try regenerating the report.</p>
               )}
