@@ -13,12 +13,12 @@ export default function DisclaimerScreen() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto bg-white rounded-lg shadow-md p-8">
+    <div className="max-w-3xl mx-auto card p-8">
       <h1 className="text-2xl font-bold text-center mb-6 text-blue-800">
         Welcome to Contract Assistant
       </h1>
       
-      <div className="prose prose-blue max-w-none">
+      <div className="prose-custom max-w-none">
         <p className="mb-4">
           Contract Assistant is designed to help any party involved in a UK building contract, 
           whether a Client, Main Contractor or Sub-contractor, explore specific issues, 
@@ -59,14 +59,14 @@ export default function DisclaimerScreen() {
         <div className="flex justify-center space-x-4">
           <button
             onClick={() => handleConsent(true)}
-            className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-200 cursor-pointer"
+            className="btn-primary"
           >
             Yes, I Understand
           </button>
           
           <button
             onClick={() => handleConsent(false)}
-            className="px-6 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition duration-200 cursor-pointer"
+            className="btn-secondary"
           >
             No, Exit
           </button>

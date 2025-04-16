@@ -15,6 +15,7 @@ export default function ReportScreen() {
   const [error, setError] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [actionSuccess, setActionSuccess] = useState(null);
   
   const reportRef = useRef();
   
@@ -117,6 +118,9 @@ export default function ReportScreen() {
   
   const handlePrint = useReactToPrint({
     content: () => reportRef.current,
+    onAfterPrint: () => {
+      showSuccessMessage('Report sent to printer');
+    }
   });
   
   const handleCreatePDF = () => {
@@ -134,18 +138,31 @@ export default function ReportScreen() {
 
       pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
       pdf.save('contract-assistant-report.pdf');
+      showSuccessMessage('PDF downloaded');
     });
   };
   
   const handleCopyToClipboard = () => {
     navigator.clipboard.writeText(report)
       .then(() => {
-        alert('Report copied to clipboard!');
+        showSuccessMessage('Report copied to clipboard');
       })
       .catch(err => {
         console.error('Could not copy text: ', err);
         Sentry.captureException(err);
       });
+  };
+  
+  const handleEmailReport = () => {
+    const subject = encodeURIComponent(`Contract Analysis: ${projectDetails.projectName}`);
+    const body = encodeURIComponent(`Contract Analysis Report\n\nProject: ${projectDetails.projectName}\n\n${report}`);
+    window.open(`mailto:?subject=${subject}&body=${body}`);
+    showSuccessMessage('Email client opened');
+  };
+
+  const showSuccessMessage = (message) => {
+    setActionSuccess(message);
+    setTimeout(() => setActionSuccess(null), 3000);
   };
   
   const handleGenerateDraftCommunication = () => {
@@ -156,39 +173,44 @@ export default function ReportScreen() {
   const formatReportText = (text) => {
     if (!text) return '';
     
-    // Replace markdown headings with properly styled headings
+    // Replace markdown elements with properly styled HTML
     let formattedText = text
       // Replace markdown bold with styled spans
-      .replace(/\*\*(.*?)\*\*/g, '<span class="font-bold">$1</span>')
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
       // Replace # headings with properly styled headings
       .replace(/^# (.*?)$/gm, '<h2 class="text-xl font-semibold text-blue-800 mt-4 mb-2">$1</h2>')
       .replace(/^## (.*?)$/gm, '<h3 class="text-lg font-medium text-blue-700 mt-3 mb-2">$1</h3>')
       .replace(/^### (.*?)$/gm, '<h4 class="text-base font-medium text-blue-600 mt-2 mb-1">$1</h4>')
+      // Replace bullet points
+      .replace(/^- (.*?)$/gm, '<li class="ml-4">$1</li>')
+      // Replace numbered lists
+      .replace(/^\d+\. (.*?)$/gm, '<li class="ml-4 list-decimal">$1</li>')
       // Replace newlines with breaks
+      .replace(/\n\n/g, '</p><p>')
       .replace(/\n/g, '<br />');
       
-    return formattedText;
+    return `<p>${formattedText}</p>`;
   };
   
   if (isLoading) {
     return (
-      <div className="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-md flex flex-col items-center justify-center" style={{ minHeight: "50vh" }}>
+      <div className="max-w-4xl mx-auto p-6 card flex flex-col items-center justify-center" style={{ minHeight: "50vh" }}>
         <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500 mb-4"></div>
-        <p className="text-xl text-gray-700">Loading your report...</p>
-        <p className="text-sm text-gray-500 mt-2">This may take a moment...</p>
+        <p className="text-xl text-gray-700">Analyzing contract issues...</p>
+        <p className="text-sm text-gray-500 mt-2">This may take a moment as we review the relevant clauses and regulations.</p>
       </div>
     );
   }
   
   if (error) {
     return (
-      <div className="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-md">
-        <div className="bg-red-50 p-4 rounded-md mb-6">
+      <div className="max-w-4xl mx-auto p-6 card">
+        <div className="bg-red-50 p-4 rounded-md mb-6 border border-red-200">
           <p className="text-red-700">{error}</p>
         </div>
         <button
           onClick={() => navigate('/project-details')}
-          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-200 cursor-pointer"
+          className="btn-primary"
         >
           Back to Project Details
         </button>
@@ -198,10 +220,10 @@ export default function ReportScreen() {
   
   return (
     <div className="max-w-4xl mx-auto">
-      <div className="bg-white rounded-lg shadow-md overflow-hidden">
-        <div className="p-6 bg-blue-700 text-white">
+      <div className="card overflow-hidden">
+        <div className="card-header">
           <h1 className="text-2xl font-bold">Contract Analysis Report</h1>
-          <p className="mt-2">
+          <p className="mt-2 text-blue-100">
             Project: {projectDetails.projectName}
           </p>
         </div>
@@ -211,15 +233,30 @@ export default function ReportScreen() {
           onPrint={handlePrint}
           onCreatePDF={handleCreatePDF}
           onCopy={handleCopyToClipboard}
+          onEmail={handleEmailReport}
           onGenerateDraft={handleGenerateDraftCommunication}
           isSaving={isSaving}
           saveSuccess={saveSuccess}
         />
         
+        {actionSuccess && (
+          <div className="bg-green-100 text-green-800 px-4 py-2 flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+            </svg>
+            {actionSuccess}
+          </div>
+        )}
+        
         <div className="p-6" ref={reportRef}>
           <div className="mb-6">
-            <h2 className="text-xl font-semibold text-blue-800 mb-2">Project Details</h2>
-            <div className="bg-gray-50 p-4 rounded-md">
+            <h2 className="text-xl font-semibold text-blue-800 mb-2 flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
+              </svg>
+              Project Details
+            </h2>
+            <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
               <p><strong>Project Name:</strong> {projectDetails.projectName}</p>
               <p><strong>Description:</strong> {projectDetails.projectDescription}</p>
               <p><strong>Form of Contract:</strong> {projectDetails.formOfContract}</p>
@@ -228,10 +265,15 @@ export default function ReportScreen() {
           </div>
           
           <div className="mb-6">
-            <h2 className="text-xl font-semibold text-blue-800 mb-2">Issues Raised</h2>
+            <h2 className="text-xl font-semibold text-blue-800 mb-2 flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              Issues Raised
+            </h2>
             <div className="space-y-3">
               {issues.map((issue, index) => (
-                <div key={issue.id} className="bg-gray-50 p-4 rounded-md">
+                <div key={issue.id} className="bg-gray-50 p-4 rounded-md border border-gray-200">
                   <p><strong>Issue {index + 1}:</strong> {issue.description}</p>
                   {issue.actionTaken && (
                     <p><strong>Actions Taken:</strong> {issue.actionTaken}</p>
@@ -242,8 +284,13 @@ export default function ReportScreen() {
           </div>
           
           <div>
-            <h2 className="text-xl font-semibold text-blue-800 mb-2">Analysis and Recommendations</h2>
-            <div className="prose prose-blue max-w-none bg-gray-50 p-4 rounded-md">
+            <h2 className="text-xl font-semibold text-blue-800 mb-2 flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M5 3a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2V5a2 2 0 00-2-2H5zm0 2h10v7h-2l-1 2H8l-1-2H5V5z" clipRule="evenodd" />
+              </svg>
+              Analysis and Recommendations
+            </h2>
+            <div className="prose-custom max-w-none bg-gray-50 p-4 rounded-md border border-gray-200">
               {report ? (
                 <div dangerouslySetInnerHTML={{ __html: formatReportText(report) }} />
               ) : (
@@ -254,17 +301,20 @@ export default function ReportScreen() {
         </div>
         
         <div className="p-6 bg-gray-50 border-t border-gray-200">
-          <div className="flex justify-between">
+          <div className="flex flex-col sm:flex-row justify-between gap-4">
             <button
               onClick={() => navigate('/project-details')}
-              className="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition duration-200 cursor-pointer"
+              className="btn-secondary flex items-center justify-center"
             >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
+              </svg>
               Back to Project Details
             </button>
             
             <button
               onClick={handleGenerateDraftCommunication}
-              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition duration-200 cursor-pointer flex items-center"
+              className="btn-accent flex items-center justify-center"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
                 <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />

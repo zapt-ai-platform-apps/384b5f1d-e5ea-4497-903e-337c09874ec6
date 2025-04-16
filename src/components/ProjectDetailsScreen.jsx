@@ -124,18 +124,23 @@ export default function ProjectDetailsScreen() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-md p-6">
+    <div className="max-w-4xl mx-auto card p-6">
       <h1 className="text-2xl font-bold text-center mb-6 text-blue-800">Project Details</h1>
       
       <form onSubmit={handleSubmit}>
         <div className="space-y-6">
           {/* Project Details Section */}
-          <div className="bg-blue-50 p-6 rounded-lg">
-            <h2 className="text-xl font-semibold mb-4 text-blue-800">Project Information</h2>
+          <div className="bg-blue-50 p-6 rounded-lg border border-blue-100">
+            <h2 className="text-xl font-semibold mb-4 text-blue-800 flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
+              </svg>
+              Project Information
+            </h2>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label htmlFor="projectName" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="projectName" className="form-label">
                   Project Name*
                 </label>
                 <input
@@ -144,16 +149,16 @@ export default function ProjectDetailsScreen() {
                   name="projectName"
                   value={projectDetails.projectName}
                   onChange={handleProjectDetailChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 box-border"
+                  className="form-input"
                   placeholder="Enter project name"
                 />
                 {errors.projectName && (
-                  <p className="mt-1 text-sm text-red-600">{errors.projectName}</p>
+                  <p className="form-error">{errors.projectName}</p>
                 )}
               </div>
               
               <div>
-                <label htmlFor="formOfContract" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="formOfContract" className="form-label">
                   Form of Contract*
                 </label>
                 <select
@@ -161,7 +166,7 @@ export default function ProjectDetailsScreen() {
                   name="formOfContract"
                   value={projectDetails.formOfContract}
                   onChange={handleProjectDetailChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 box-border"
+                  className="form-input"
                 >
                   <option value="">Select a contract form</option>
                   {contractForms.map((form) => (
@@ -171,12 +176,12 @@ export default function ProjectDetailsScreen() {
                   ))}
                 </select>
                 {errors.formOfContract && (
-                  <p className="mt-1 text-sm text-red-600">{errors.formOfContract}</p>
+                  <p className="form-error">{errors.formOfContract}</p>
                 )}
               </div>
               
               <div className="md:col-span-2">
-                <label htmlFor="projectDescription" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="projectDescription" className="form-label">
                   Project Description*
                 </label>
                 <textarea
@@ -185,16 +190,16 @@ export default function ProjectDetailsScreen() {
                   value={projectDetails.projectDescription}
                   onChange={handleProjectDetailChange}
                   rows="3"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 box-border"
+                  className="form-input"
                   placeholder="Briefly describe the project"
                 ></textarea>
                 {errors.projectDescription && (
-                  <p className="mt-1 text-sm text-red-600">{errors.projectDescription}</p>
+                  <p className="form-error">{errors.projectDescription}</p>
                 )}
               </div>
               
               <div>
-                <label htmlFor="organizationRole" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="organizationRole" className="form-label">
                   Your Organization's Role*
                 </label>
                 <select
@@ -202,7 +207,7 @@ export default function ProjectDetailsScreen() {
                   name="organizationRole"
                   value={projectDetails.organizationRole}
                   onChange={handleProjectDetailChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 box-border"
+                  className="form-input"
                 >
                   <option value="">Select your role</option>
                   {organizationRoles.map((role) => (
@@ -212,15 +217,20 @@ export default function ProjectDetailsScreen() {
                   ))}
                 </select>
                 {errors.organizationRole && (
-                  <p className="mt-1 text-sm text-red-600">{errors.organizationRole}</p>
+                  <p className="form-error">{errors.organizationRole}</p>
                 )}
               </div>
             </div>
           </div>
           
           {/* Issues Section */}
-          <div className="bg-blue-50 p-6 rounded-lg">
-            <h2 className="text-xl font-semibold mb-4 text-blue-800">Contract Issues</h2>
+          <div className="bg-blue-50 p-6 rounded-lg border border-blue-100">
+            <h2 className="text-xl font-semibold mb-4 text-blue-800 flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              Contract Issues
+            </h2>
             
             {issues.map((issue, index) => (
               <IssueForm
@@ -238,7 +248,7 @@ export default function ProjectDetailsScreen() {
               <button
                 type="button"
                 onClick={addNewIssue}
-                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition duration-200 cursor-pointer flex items-center"
+                className="btn-accent inline-flex items-center"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
@@ -249,7 +259,7 @@ export default function ProjectDetailsScreen() {
           </div>
           
           {errors.form && (
-            <div className="bg-red-50 p-4 rounded-md">
+            <div className="bg-red-50 p-4 rounded-md border border-red-200">
               <p className="text-red-700">{errors.form}</p>
             </div>
           )}
@@ -258,7 +268,7 @@ export default function ProjectDetailsScreen() {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-200 cursor-pointer flex items-center"
+              className="btn-primary flex items-center"
             >
               {isSubmitting ? (
                 <>
