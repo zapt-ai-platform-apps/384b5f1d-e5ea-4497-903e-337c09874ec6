@@ -7,6 +7,7 @@ export default function ReportActions({
   onCopy, 
   onGenerateDraft,
   onEmail,
+  onExportWord,
   isSaving,
   saveSuccess
 }) {
@@ -50,7 +51,7 @@ export default function ReportActions({
             Draft Letter
           </button>
 
-          {/* More actions dropdown */}
+          {/* Export actions */}
           <div className="relative inline-block">
             <button
               onClick={() => setShowActions(!showActions)}
@@ -59,7 +60,7 @@ export default function ReportActions({
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
                 <path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" />
               </svg>
-              Actions
+              Export
             </button>
             
             {showActions && (
@@ -82,6 +83,16 @@ export default function ReportActions({
                     <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
                   </svg>
                   Save as PDF
+                </button>
+
+                <button
+                  onClick={() => { onExportWord(); setShowActions(false); }}
+                  className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
+                  </svg>
+                  Export to Word
                 </button>
                 
                 <button

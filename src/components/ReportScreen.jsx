@@ -5,6 +5,7 @@ import { jsPDF } from 'jspdf';
 import { useReactToPrint } from 'react-to-print';
 import ReportActions from './ReportActions';
 import * as Sentry from '@sentry/browser';
+import { generateWordDocument } from '../utils/wordExport';
 
 export default function ReportScreen() {
   const navigate = useNavigate();
@@ -160,6 +161,33 @@ export default function ReportScreen() {
     showSuccessMessage('Email client opened');
   };
 
+  const handleExportToWord = async () => {
+    try {
+      // Format report content for Word export
+      const formattedContent = formatReportText(report);
+      
+      // Generate the Word document
+      const success = await generateWordDocument(
+        formattedContent, 
+        { 
+          title: 'Contract Analysis Report', 
+          projectName: projectDetails.projectName 
+        },
+        `contract-analysis-${projectDetails.projectName.replace(/\s+/g, '-').toLowerCase()}`
+      );
+      
+      if (success) {
+        showSuccessMessage('Word document downloaded');
+      } else {
+        setError('Failed to generate Word document. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error exporting to Word:', error);
+      Sentry.captureException(error);
+      setError('An error occurred while creating the Word document.');
+    }
+  };
+
   const showSuccessMessage = (message) => {
     setActionSuccess(message);
     setTimeout(() => setActionSuccess(null), 3000);
@@ -234,6 +262,7 @@ export default function ReportScreen() {
           onCreatePDF={handleCreatePDF}
           onCopy={handleCopyToClipboard}
           onEmail={handleEmailReport}
+          onExportWord={handleExportToWord}
           onGenerateDraft={handleGenerateDraftCommunication}
           isSaving={isSaving}
           saveSuccess={saveSuccess}

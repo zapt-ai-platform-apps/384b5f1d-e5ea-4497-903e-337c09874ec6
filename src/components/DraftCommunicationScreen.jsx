@@ -4,6 +4,7 @@ import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { useReactToPrint } from 'react-to-print';
 import * as Sentry from '@sentry/browser';
+import { generateWordDocument } from '../utils/wordExport';
 
 export default function DraftCommunicationScreen() {
   const navigate = useNavigate();
@@ -119,6 +120,33 @@ export default function DraftCommunicationScreen() {
     showSuccessMessage('Email client opened');
   };
 
+  const handleExportToWord = async () => {
+    try {
+      // Format communication content for Word export
+      const formattedContent = formatCommunicationText(draftCommunication);
+      
+      // Generate the Word document
+      const success = await generateWordDocument(
+        formattedContent, 
+        { 
+          title: 'Contract Communication Draft', 
+          projectName: projectDetails.projectName 
+        },
+        `contract-communication-${projectDetails.projectName.replace(/\s+/g, '-').toLowerCase()}`
+      );
+      
+      if (success) {
+        showSuccessMessage('Word document downloaded');
+      } else {
+        setError('Failed to generate Word document. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error exporting to Word:', error);
+      Sentry.captureException(error);
+      setError('An error occurred while creating the Word document.');
+    }
+  };
+
   const showSuccessMessage = (message) => {
     setActionSuccess(message);
     setTimeout(() => setActionSuccess(null), 3000);
@@ -193,6 +221,16 @@ export default function DraftCommunicationScreen() {
             </svg>
             Save as PDF
           </button>
+
+          <button
+            onClick={handleExportToWord}
+            className="action-button bg-blue-600 hover:bg-blue-700"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
+            </svg>
+            Export to Word
+          </button>
           
           <button
             onClick={handleCopyToClipboard}
@@ -207,7 +245,7 @@ export default function DraftCommunicationScreen() {
 
           <button
             onClick={handleEmailDraft}
-            className="action-button bg-blue-600 hover:bg-blue-700"
+            className="action-button bg-yellow-600 hover:bg-yellow-700"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
               <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
