@@ -1,4 +1,4 @@
-import { Document, Paragraph, TextRun, HeadingLevel, Packer, AlignmentType } from 'docx';
+import { Document, Paragraph, TextRun, HeadingLevel, Packer, AlignmentType, Style, UnderlineType, convertInchesToTwip } from 'docx';
 import { saveAs } from 'file-saver';
 import * as Sentry from '@sentry/browser';
 
@@ -33,20 +33,93 @@ const createDocumentParagraphs = (html) => {
   
   const paragraphs = [];
   
+  // Define text styles
+  const normalStyle = {
+    font: "Arial",
+    size: 24, // 12pt
+  };
+  
+  const headingStyle = {
+    font: "Arial",
+    size: 28, // 14pt
+    bold: true,
+  };
+  
+  const subheadingStyle = {
+    font: "Arial",
+    size: 26, // 13pt
+    bold: true,
+  };
+  
   // Process each child node to create appropriate Word elements
   Array.from(tempDiv.childNodes).forEach(node => {
     if (node.nodeType === Node.TEXT_NODE) {
       if (node.textContent.trim()) {
         paragraphs.push(new Paragraph({
-          children: [new TextRun(node.textContent.trim())],
+          children: [new TextRun({
+            text: node.textContent.trim(),
+            ...normalStyle,
+          })],
           spacing: { after: 200 }
         }));
       }
     } else if (node.nodeType === Node.ELEMENT_NODE) {
       // Process by tag type
       if (node.tagName === 'P') {
+        const textRuns = [];
+        
+        // Handle inline formatting inside paragraphs
+        Array.from(node.childNodes).forEach(child => {
+          if (child.nodeType === Node.TEXT_NODE) {
+            textRuns.push(new TextRun({
+              text: child.textContent,
+              ...normalStyle,
+            }));
+          } else if (child.nodeType === Node.ELEMENT_NODE) {
+            if (child.tagName === 'STRONG' || child.tagName === 'B') {
+              textRuns.push(new TextRun({
+                text: child.textContent,
+                bold: true,
+                ...normalStyle,
+              }));
+            } else if (child.tagName === 'EM' || child.tagName === 'I') {
+              textRuns.push(new TextRun({
+                text: child.textContent,
+                italic: true,
+                ...normalStyle,
+              }));
+            } else if (child.tagName === 'U') {
+              textRuns.push(new TextRun({
+                text: child.textContent,
+                underline: {
+                  type: UnderlineType.SINGLE,
+                },
+                ...normalStyle,
+              }));
+            } else if (child.tagName === 'BR') {
+              textRuns.push(new TextRun({
+                text: "",
+                break: 1,
+                ...normalStyle,
+              }));
+            } else {
+              textRuns.push(new TextRun({
+                text: child.textContent,
+                ...normalStyle,
+              }));
+            }
+          }
+        });
+        
+        if (textRuns.length === 0) {
+          textRuns.push(new TextRun({
+            text: node.textContent.trim(),
+            ...normalStyle,
+          }));
+        }
+        
         paragraphs.push(new Paragraph({
-          children: [new TextRun(node.textContent.trim())],
+          children: textRuns,
           spacing: { after: 200 }
         }));
       } else if (['H1', 'H2', 'H3', 'H4'].includes(node.tagName)) {
@@ -59,21 +132,31 @@ const createDocumentParagraphs = (html) => {
         };
         
         paragraphs.push(new Paragraph({
-          text: node.textContent.trim(),
+          children: [new TextRun({
+            text: node.textContent.trim(),
+            ...headingStyle,
+          })],
           heading: headingLevelMap[node.tagName],
           spacing: { before: 300, after: 200 }
         }));
       } else if (node.tagName === 'LI') {
         paragraphs.push(new Paragraph({
-          text: `• ${node.textContent.trim()}`,
-          spacing: { after: 200 }
+          children: [new TextRun({
+            text: `• ${node.textContent.trim()}`,
+            ...normalStyle,
+          })],
+          indent: { left: convertInchesToTwip(0.25) },
+          spacing: { after: 120 }
         }));
       } else if (node.tagName === 'BR') {
         paragraphs.push(new Paragraph({ spacing: { after: 200 } }));
       } else {
         // Default handling for other elements
         paragraphs.push(new Paragraph({
-          text: node.textContent.trim(),
+          children: [new TextRun({
+            text: node.textContent.trim(),
+            ...normalStyle,
+          })],
           spacing: { after: 200 }
         }));
       }
@@ -95,6 +178,53 @@ export const generateWordDocument = async (html, metadata, filename) => {
     
     // Create document with proper sections
     const doc = new Document({
+      styles: {
+        paragraphStyles: [
+          {
+            id: "Normal",
+            name: "Normal",
+            run: {
+              font: "Arial",
+              size: 24,
+            },
+            paragraph: {
+              spacing: {
+                line: 276, // 1.15x line spacing
+              },
+            },
+          },
+          {
+            id: "Heading1",
+            name: "Heading 1",
+            run: {
+              font: "Arial",
+              size: 32,
+              bold: true,
+            },
+            paragraph: {
+              spacing: {
+                before: 240,
+                after: 120,
+              },
+            },
+          },
+          {
+            id: "Heading2",
+            name: "Heading 2",
+            run: {
+              font: "Arial",
+              size: 28,
+              bold: true,
+            },
+            paragraph: {
+              spacing: {
+                before: 240,
+                after: 120,
+              },
+            },
+          },
+        ],
+      },
       sections: [
         {
           properties: {},
@@ -118,7 +248,13 @@ export const generateWordDocument = async (html, metadata, filename) => {
             
             // Date
             new Paragraph({
-              text: `Date: ${new Date().toLocaleDateString()}`,
+              children: [
+                new TextRun({
+                  text: `Date: ${new Date().toLocaleDateString()}`,
+                  font: "Arial",
+                  size: 24,
+                }),
+              ],
               spacing: { after: 400 }
             }),
             
@@ -127,7 +263,14 @@ export const generateWordDocument = async (html, metadata, filename) => {
             
             // Footer
             new Paragraph({
-              text: 'Generated by Contract Assistant',
+              children: [
+                new TextRun({
+                  text: 'Generated by Contract Assistant',
+                  font: "Arial",
+                  size: 20,
+                  color: "666666",
+                }),
+              ],
               alignment: AlignmentType.CENTER,
               spacing: { before: 400 }
             })
@@ -162,19 +305,49 @@ export const generateWordDocument = async (html, metadata, filename) => {
 export const generateSimpleWordDocument = async (text, title, filename) => {
   try {
     const doc = new Document({
+      styles: {
+        paragraphStyles: [
+          {
+            id: "Normal",
+            name: "Normal",
+            run: {
+              font: "Arial",
+              size: 24,
+            },
+            paragraph: {
+              spacing: {
+                line: 276, // 1.15x line spacing
+              },
+            },
+          },
+        ],
+      },
       sections: [
         {
           properties: {},
           children: [
             new Paragraph({
-              text: title || 'Contract Assistant Document',
+              children: [
+                new TextRun({
+                  text: title || 'Contract Assistant Document',
+                  font: "Arial",
+                  size: 32,
+                  bold: true,
+                }),
+              ],
               heading: HeadingLevel.HEADING_1,
               spacing: { after: 300 }
             }),
             
             ...text.split('\n\n').map(paragraph => 
               new Paragraph({
-                text: paragraph.trim(),
+                children: [
+                  new TextRun({
+                    text: paragraph.trim(),
+                    font: "Arial",
+                    size: 24,
+                  }),
+                ],
                 spacing: { after: 200 }
               })
             )

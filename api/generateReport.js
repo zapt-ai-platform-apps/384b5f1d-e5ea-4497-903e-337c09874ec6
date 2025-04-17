@@ -40,7 +40,7 @@ export default async function handler(req, res) {
       messages: [
         {
           role: "system",
-          content: "You are a UK construction contract expert. Provide detailed, accurate information about construction contract clauses and recommendations based on the given scenario."
+          content: "You are a UK construction contract expert. Provide detailed, accurate information about construction contract clauses and recommendations based on the given scenario. Use proper formatting with clear headings and paragraphs. Do not use markdown symbols like # or * in your response. Format your text with proper headings, paragraphs, and use bold for emphasis where appropriate."
         },
         {
           role: "user",
@@ -87,7 +87,15 @@ Based on the information provided, please provide:
 3. References to all relevant contract clauses with accurate and current details.
 4. Any warnings or special considerations based on the role of the organization.
 
-Please format your response clearly with headers, bullet points, and references to specific clauses where appropriate.`;
+IMPORTANT FORMATTING INSTRUCTIONS:
+- Use clear section headings for different parts of your analysis
+- Use proper paragraphs with adequate spacing
+- Use bold text for important points and emphasis
+- DO NOT use markdown symbols like hashtags (#) or asterisks (*) in your response
+- Present the information in a clean, professional format suitable for a business document
+- Use numbered or bulleted lists where appropriate (written out as "1." or "•" instead of markdown)
+
+Please format your response as a professional document that can be directly printed or shared with clients.`;
 
   return prompt;
 }

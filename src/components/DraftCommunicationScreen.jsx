@@ -78,9 +78,21 @@ export default function DraftCommunicationScreen() {
   
   const handlePrint = useReactToPrint({
     content: () => communicationRef.current,
+    documentTitle: `Contract Communication: ${projectDetails?.projectName || 'Draft'}`,
     onAfterPrint: () => {
       showSuccessMessage('Communication sent to printer');
-    }
+    },
+    pageStyle: `
+      @media print {
+        body {
+          font-family: Arial, Aptos, sans-serif;
+          font-size: 12pt;
+        }
+        h1, h2, h3, h4 {
+          font-family: Arial, Aptos, sans-serif;
+        }
+      }
+    `,
   });
   
   const handleCreatePDF = () => {
@@ -103,7 +115,10 @@ export default function DraftCommunicationScreen() {
   };
   
   const handleCopyToClipboard = () => {
-    navigator.clipboard.writeText(draftCommunication)
+    // Create a clean version for clipboard
+    const textToCopy = draftCommunication.replace(/#+\s/g, '').replace(/\*\*/g, '');
+    
+    navigator.clipboard.writeText(textToCopy)
       .then(() => {
         showSuccessMessage('Communication copied to clipboard');
       })
@@ -114,8 +129,11 @@ export default function DraftCommunicationScreen() {
   };
 
   const handleEmailDraft = () => {
+    // Create a clean version for email
+    const cleanDraft = draftCommunication.replace(/#+\s/g, '').replace(/\*\*/g, '');
+    
     const subject = encodeURIComponent(`Contract Communication: ${projectDetails.projectName}`);
-    const body = encodeURIComponent(draftCommunication);
+    const body = encodeURIComponent(cleanDraft);
     window.open(`mailto:?subject=${subject}&body=${body}`);
     showSuccessMessage('Email client opened');
   };
@@ -152,12 +170,24 @@ export default function DraftCommunicationScreen() {
     setTimeout(() => setActionSuccess(null), 3000);
   };
 
-  // Function to format text by replacing markdown with proper HTML
+  // Function to format text for display in the UI
   const formatCommunicationText = (text) => {
     if (!text) return '';
     
-    // Replace common email/letter formatting patterns with styled HTML
+    // Identify if the text already has HTML-like formatting
+    const hasHtmlFormatting = /<\/?[a-z][\s\S]*>/i.test(text);
+    
+    if (hasHtmlFormatting) {
+      // If it already has HTML formatting, just return it
+      return text;
+    }
+    
+    // Otherwise format the text appropriately
     let formattedText = text
+      // Replace markdown elements with proper HTML (in case they remain)
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      // Handle section or letter heading patterns like "RE:" or "SUBJECT:"
+      .replace(/^(RE:|SUBJECT:|FROM:|TO:|DATE:|REF:)(.*?)$/gim, '<p><strong>$1</strong>$2</p>')
       // Preserve line breaks for addresses and signature blocks
       .replace(/\n\n/g, '</p><p>')
       .replace(/\n/g, '<br />');

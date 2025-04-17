@@ -40,7 +40,7 @@ export default async function handler(req, res) {
       messages: [
         {
           role: "system",
-          content: "You are a UK construction contract expert. Create a professional communication draft based on the details provided."
+          content: "You are a UK construction contract expert. Create a professional communication draft based on the details provided. Use proper business letter formatting with clear paragraphs and proper emphasis. Do not use markdown symbols like # or * in your response. Format your text with proper headings, paragraphs, and use appropriate emphasis where needed."
         },
         {
           role: "user",
@@ -89,6 +89,14 @@ Please create a well-structured, professional communication that:
 4. States the position based on the above analysis
 5. Proposes specific next steps or requests
 6. Maintains a professional tone throughout
+
+IMPORTANT FORMATTING INSTRUCTIONS:
+- DO NOT use markdown formatting such as hashtags (#) or asterisks (*) in your response
+- Use proper business letter or email formatting with appropriate paragraphs
+- Use headings and emphasis appropriately without markdown symbols
+- Format the document so it's immediately ready to print or send
+- Include all necessary parts of a formal business letter (date, address, salutation, etc.)
+- Use clear paragraph breaks for readability
 
 Format it as a ready-to-use professional communication that I can send directly.`;
 

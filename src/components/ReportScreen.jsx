@@ -119,9 +119,21 @@ export default function ReportScreen() {
   
   const handlePrint = useReactToPrint({
     content: () => reportRef.current,
+    documentTitle: `Contract Analysis: ${projectDetails?.projectName || 'Report'}`,
     onAfterPrint: () => {
       showSuccessMessage('Report sent to printer');
-    }
+    },
+    pageStyle: `
+      @media print {
+        body {
+          font-family: Arial, Aptos, sans-serif;
+          font-size: 12pt;
+        }
+        h1, h2, h3, h4 {
+          font-family: Arial, Aptos, sans-serif;
+        }
+      }
+    `,
   });
   
   const handleCreatePDF = () => {
@@ -144,7 +156,10 @@ export default function ReportScreen() {
   };
   
   const handleCopyToClipboard = () => {
-    navigator.clipboard.writeText(report)
+    // Create a clean version of the report text for clipboard
+    const textToCopy = report.replace(/#+\s/g, '').replace(/\*\*/g, '');
+    
+    navigator.clipboard.writeText(textToCopy)
       .then(() => {
         showSuccessMessage('Report copied to clipboard');
       })
@@ -155,8 +170,11 @@ export default function ReportScreen() {
   };
   
   const handleEmailReport = () => {
+    // Create a clean version of the report text for email
+    const cleanReport = report.replace(/#+\s/g, '').replace(/\*\*/g, '');
+    
     const subject = encodeURIComponent(`Contract Analysis: ${projectDetails.projectName}`);
-    const body = encodeURIComponent(`Contract Analysis Report\n\nProject: ${projectDetails.projectName}\n\n${report}`);
+    const body = encodeURIComponent(`Contract Analysis Report\n\nProject: ${projectDetails.projectName}\n\n${cleanReport}`);
     window.open(`mailto:?subject=${subject}&body=${body}`);
     showSuccessMessage('Email client opened');
   };
@@ -197,23 +215,36 @@ export default function ReportScreen() {
     navigate('/draft-communication');
   };
   
-  // Function to format text by replacing markdown with proper HTML
+  // Function to format text for display in the UI
   const formatReportText = (text) => {
     if (!text) return '';
     
-    // Replace markdown elements with properly styled HTML
+    // Identify if the text already has HTML-like formatting
+    const hasHtmlFormatting = /<\/?[a-z][\s\S]*>/i.test(text);
+    
+    if (hasHtmlFormatting) {
+      // If it already has HTML formatting, just return it
+      return text;
+    }
+    
+    // Otherwise do our best to format it properly
     let formattedText = text
-      // Replace markdown bold with styled spans
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      // Replace # headings with properly styled headings
+      // Handle section titles that might be in ALL CAPS or followed by colons
+      .replace(/^([A-Z][A-Z\s]{2,}):?$/gm, '<h2 class="text-xl font-semibold text-blue-800 mt-4 mb-2">$1</h2>')
+      // Replace any remaining markdown headings with styled HTML (in case they remain)
       .replace(/^# (.*?)$/gm, '<h2 class="text-xl font-semibold text-blue-800 mt-4 mb-2">$1</h2>')
       .replace(/^## (.*?)$/gm, '<h3 class="text-lg font-medium text-blue-700 mt-3 mb-2">$1</h3>')
       .replace(/^### (.*?)$/gm, '<h4 class="text-base font-medium text-blue-600 mt-2 mb-1">$1</h4>')
+      // Replace bold markdown (in case it remains)
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      // Handle section titles written like "1. Section Title"
+      .replace(/^(\d+\.\s+)([A-Z].*?)$/gm, '<h3 class="text-lg font-medium text-blue-700 mt-3 mb-2">$1$2</h3>')
       // Replace bullet points
-      .replace(/^- (.*?)$/gm, '<li class="ml-4">$1</li>')
-      // Replace numbered lists
-      .replace(/^\d+\. (.*?)$/gm, '<li class="ml-4 list-decimal">$1</li>')
-      // Replace newlines with breaks
+      .replace(/^- (.*?)$/gm, '<li class="ml-4">• $1</li>')
+      .replace(/^• (.*?)$/gm, '<li class="ml-4">• $1</li>')
+      // Replace numbered lists but keep the numbers
+      .replace(/^(\d+)\. (.*?)$/gm, '<li class="ml-4 list-decimal">$1. $2</li>')
+      // Replace paragraph breaks
       .replace(/\n\n/g, '</p><p>')
       .replace(/\n/g, '<br />');
       
