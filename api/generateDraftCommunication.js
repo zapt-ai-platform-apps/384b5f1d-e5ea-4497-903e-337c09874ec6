@@ -40,7 +40,7 @@ export default async function handler(req, res) {
       messages: [
         {
           role: "system",
-          content: "You are a UK construction contract expert. Create a professional communication draft based on the details provided. Use proper business letter formatting with clear paragraphs and proper emphasis. Do not use markdown symbols like # or * in your response. Format your text with proper headings, paragraphs, and use appropriate emphasis where needed."
+          content: "You are a UK construction contract expert. Create a professional communication draft based on the details provided, written strictly from the perspective of the user's stated role. Use proper business letter formatting with clear paragraphs and proper emphasis. Do not use markdown symbols like # or * in your response. Format your text with proper headings, paragraphs, and use appropriate emphasis where needed."
         },
         {
           role: "user",
@@ -65,7 +65,7 @@ function constructPrompt(projectDetails, issues, report) {
   let prompt = `Please draft a professional communication in UK English format (formal letter or email) regarding the following construction contract issue:
 
 Project Name: ${projectName}
-Organization Role: ${organizationRole}
+Organization Role: ${organizationRole} (THIS IS YOUR ROLE - YOU ARE WRITING AS THIS ROLE)
 Form of Contract: ${formOfContract}
 
 Issues: 
@@ -82,13 +82,17 @@ Action taken to date: ${issue.actionTaken || 'None'}
 The analysis of the issues determined:
 ${report}
 
+VERY IMPORTANT: This communication must be written strictly from the perspective of a ${organizationRole}. Do not include any statements, advice, or language that would be inappropriate or unusual for someone in this role to say to the other party. For example, if you are an Employer/Client, do not recommend that the contractor seek legal advice or prepare for disputes. Instead, state your position clearly and professionally.
+
 Please create a well-structured, professional communication that:
-1. Follows UK business letter/email standards
-2. Is formal but clear
-3. References the relevant contract clauses
-4. States the position based on the above analysis
-5. Proposes specific next steps or requests
-6. Maintains a professional tone throughout
+1. Is written ONLY from the perspective of a ${organizationRole}
+2. Follows UK business letter/email standards
+3. Is formal but clear
+4. References the relevant contract clauses
+5. States the position based on the above analysis
+6. Proposes specific next steps or requests that are appropriate for your role
+7. Maintains a professional tone throughout
+8. Uses language and phrasing that a ${organizationRole} would actually use
 
 IMPORTANT FORMATTING INSTRUCTIONS:
 - DO NOT use markdown formatting such as hashtags (#) or asterisks (*) in your response
@@ -98,7 +102,7 @@ IMPORTANT FORMATTING INSTRUCTIONS:
 - Include all necessary parts of a formal business letter (date, address, salutation, etc.)
 - Use clear paragraph breaks for readability
 
-Format it as a ready-to-use professional communication that I can send directly.`;
+Format it as a ready-to-use professional communication that I can send directly as a ${organizationRole}.`;
 
   return prompt;
 }
