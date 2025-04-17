@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { useReactToPrint } from 'react-to-print';
@@ -9,6 +10,7 @@ import { generateWordDocument } from '../utils/wordExport';
 
 export default function ReportScreen() {
   const navigate = useNavigate();
+  const { session } = useAuth();
   const [projectDetails, setProjectDetails] = useState(null);
   const [issues, setIssues] = useState([]);
   const [report, setReport] = useState('');
@@ -17,41 +19,101 @@ export default function ReportScreen() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [actionSuccess, setActionSuccess] = useState(null);
+  const [projectId, setProjectId] = useState(null);
   
   const reportRef = useRef();
   
   useEffect(() => {
-    // Load project details and issues from localStorage
-    const storedProjectDetails = localStorage.getItem('projectDetails');
-    const storedIssues = localStorage.getItem('issues');
-    const storedReport = localStorage.getItem('report');
+    // Try to get current project ID
+    const currentProjectId = localStorage.getItem('currentProjectId');
     
-    if (!storedProjectDetails || !storedIssues) {
-      setError('No project details found. Please go back and enter your project information.');
-      setIsLoading(false);
-      return;
+    if (currentProjectId && session) {
+      console.log(`Found current project ID: ${currentProjectId}`);
+      setProjectId(currentProjectId);
+      loadProjectFromDatabase(currentProjectId);
+    } else {
+      console.log('No current project ID found, loading from localStorage');
+      loadProjectFromLocalStorage();
     }
-    
+  }, [session]);
+  
+  const loadProjectFromDatabase = async (id) => {
     try {
-      setProjectDetails(JSON.parse(storedProjectDetails));
-      setIssues(JSON.parse(storedIssues));
+      console.log(`Loading project ${id} from database`);
+      const response = await fetch(`/api/project?projectId=${id}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
+        }
+      });
       
-      // Check if we already have a report in localStorage (from saved reports)
+      if (!response.ok) {
+        throw new Error('Failed to load project');
+      }
+      
+      const data = await response.json();
+      console.log('Project data loaded successfully from database');
+      
+      setProjectDetails(data.projectDetails);
+      setIssues(data.issues);
+      
+      // If we have a report, use it; otherwise generate a new one
+      if (data.report) {
+        console.log('Using existing report from database');
+        setReport(data.report);
+        localStorage.setItem('report', data.report); // For backward compatibility
+        setIsLoading(false);
+      } else {
+        console.log('Generating new report for project');
+        generateReport(data.projectDetails, data.issues);
+      }
+    } catch (error) {
+      console.error('Error loading project from database:', error);
+      Sentry.captureException(error);
+      
+      // Fall back to localStorage
+      console.log('Falling back to localStorage');
+      loadProjectFromLocalStorage();
+    }
+  };
+  
+  const loadProjectFromLocalStorage = () => {
+    try {
+      // Load project details and issues from localStorage
+      const storedProjectDetails = localStorage.getItem('projectDetails');
+      const storedIssues = localStorage.getItem('issues');
+      const storedReport = localStorage.getItem('report');
+      
+      if (!storedProjectDetails || !storedIssues) {
+        setError('No project details found. Please go back and enter your project information.');
+        setIsLoading(false);
+        return;
+      }
+      
+      const parsedProjectDetails = JSON.parse(storedProjectDetails);
+      const parsedIssues = JSON.parse(storedIssues);
+      
+      setProjectDetails(parsedProjectDetails);
+      setIssues(parsedIssues);
+      
+      // Check if we already have a report in localStorage
       if (storedReport) {
         console.log('Using existing report from localStorage');
         setReport(storedReport);
         setIsLoading(false);
       } else {
-        // Generate a new report only if we don't have one
-        generateReport(JSON.parse(storedProjectDetails), JSON.parse(storedIssues));
+        // Generate a new report
+        console.log('Generating new report for project from localStorage');
+        generateReport(parsedProjectDetails, parsedIssues);
       }
     } catch (error) {
-      console.error('Error loading data:', error);
+      console.error('Error loading data from localStorage:', error);
       Sentry.captureException(error);
       setError('An error occurred while loading your project data. Please try again.');
       setIsLoading(false);
     }
-  }, []);
+  };
   
   const generateReport = async (projectDetails, issues) => {
     setIsLoading(true);
@@ -61,6 +123,7 @@ export default function ReportScreen() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': session ? `Bearer ${session.access_token}` : '',
         },
         body: JSON.stringify({ projectDetails, issues }),
       });
@@ -73,8 +136,14 @@ export default function ReportScreen() {
       console.log('Received report data');
       setReport(data.report);
       
-      // Store the report in localStorage for the draft communication screen
+      // Store the report in localStorage for backward compatibility
       localStorage.setItem('report', data.report);
+      
+      // If we have a project ID, update the report in the database
+      if (projectId && session) {
+        console.log('Saving report to database');
+        await saveReportToDatabase(data.report);
+      }
     } catch (error) {
       console.error('Error generating report:', error);
       Sentry.captureException(error);
@@ -84,27 +153,58 @@ export default function ReportScreen() {
     }
   };
   
-  const saveReport = () => {
+  const saveReportToDatabase = async (reportContent) => {
+    try {
+      console.log(`Saving report to database for project ID: ${projectId}`);
+      const response = await fetch(`/api/projects?projectId=${projectId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          projectDetails,
+          issues,
+          report: reportContent
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to save report to database');
+      }
+      
+      console.log('Report saved to database');
+    } catch (error) {
+      console.error('Error saving report to database:', error);
+      Sentry.captureException(error);
+      // This is non-critical, so we don't need to show an error to the user
+    }
+  };
+  
+  const saveReport = async () => {
     setIsSaving(true);
     try {
-      // Get existing saved reports or initialize empty array
-      const savedReports = JSON.parse(localStorage.getItem('savedReports')) || [];
-      
-      // Create new report object
-      const newReport = {
-        id: Date.now(),
-        date: new Date().toISOString(),
-        projectName: projectDetails.projectName,
-        projectDetails,
-        issues,
-        reportContent: report
-      };
-      
-      // Add to saved reports
-      savedReports.push(newReport);
-      
-      // Save back to localStorage
-      localStorage.setItem('savedReports', JSON.stringify(savedReports));
+      if (session && projectId) {
+        // Save to database
+        console.log('Saving report to database');
+        await saveReportToDatabase(report);
+      } else {
+        // Save to localStorage (backward compatibility)
+        console.log('Saving report to localStorage');
+        const savedReports = JSON.parse(localStorage.getItem('savedReports')) || [];
+        
+        const newReport = {
+          id: Date.now(),
+          date: new Date().toISOString(),
+          projectName: projectDetails.projectName,
+          projectDetails,
+          issues,
+          reportContent: report
+        };
+        
+        savedReports.push(newReport);
+        localStorage.setItem('savedReports', JSON.stringify(savedReports));
+      }
       
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
@@ -269,7 +369,7 @@ export default function ReportScreen() {
         </div>
         <button
           onClick={() => navigate('/project-details')}
-          className="btn-primary"
+          className="btn-primary cursor-pointer"
         >
           Back to Project Details
         </button>
@@ -364,7 +464,7 @@ export default function ReportScreen() {
           <div className="flex flex-col sm:flex-row justify-between gap-4">
             <button
               onClick={() => navigate('/project-details')}
-              className="btn-secondary flex items-center justify-center"
+              className="btn-secondary flex items-center justify-center cursor-pointer"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
@@ -374,7 +474,7 @@ export default function ReportScreen() {
             
             <button
               onClick={handleGenerateDraftCommunication}
-              className="btn-accent flex items-center justify-center"
+              className="btn-accent flex items-center justify-center cursor-pointer"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
                 <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />

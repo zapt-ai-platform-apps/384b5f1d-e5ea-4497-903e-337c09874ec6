@@ -1,10 +1,15 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import IssueForm from './IssueForm';
 import { contractForms, organizationRoles } from '../data/contractData';
+import * as Sentry from '@sentry/browser';
 
 export default function ProjectDetailsScreen() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { session } = useAuth();
+  
   const [projectDetails, setProjectDetails] = useState({
     projectName: '',
     projectDescription: '',
@@ -18,6 +23,73 @@ export default function ProjectDetailsScreen() {
   
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [projectId, setProjectId] = useState(null);
+
+  // Check if we're editing an existing project
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const id = params.get('id');
+    
+    if (id && session) {
+      setIsLoading(true);
+      setProjectId(id);
+      
+      const loadProject = async () => {
+        try {
+          console.log(`Loading project details for project ID: ${id}`);
+          const response = await fetch(`/api/project?projectId=${id}`, {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${session.access_token}`,
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          if (!response.ok) {
+            throw new Error('Failed to load project');
+          }
+          
+          const data = await response.json();
+          console.log('Project data loaded successfully');
+          
+          // Set project details
+          setProjectDetails(data.projectDetails);
+          
+          // Set issues
+          setIssues(data.issues);
+          
+          // Store report in localStorage for later
+          if (data.report) {
+            localStorage.setItem('report', data.report);
+          }
+          
+        } catch (error) {
+          console.error('Error loading project:', error);
+          Sentry.captureException(error);
+          setErrors({ form: 'Failed to load project. Please try again.' });
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      
+      loadProject();
+    } else {
+      // Check for existing data in localStorage for backwards compatibility
+      const storedProjectDetails = localStorage.getItem('projectDetails');
+      const storedIssues = localStorage.getItem('issues');
+      
+      if (storedProjectDetails && storedIssues) {
+        try {
+          setProjectDetails(JSON.parse(storedProjectDetails));
+          setIssues(JSON.parse(storedIssues));
+        } catch (error) {
+          console.error('Error parsing stored data:', error);
+          Sentry.captureException(error);
+        }
+      }
+    }
+  }, [location.search, session]);
 
   const handleProjectDetailChange = (e) => {
     const { name, value } = e.target;
@@ -106,14 +178,50 @@ export default function ProjectDetailsScreen() {
     setIsSubmitting(true);
     
     try {
-      // Save to localStorage for now
+      // Save to localStorage for backward compatibility and as a fallback
       localStorage.setItem('projectDetails', JSON.stringify(projectDetails));
       localStorage.setItem('issues', JSON.stringify(issues));
+      
+      // If user is logged in, save to database
+      if (session) {
+        console.log('Saving project to database');
+        const method = projectId ? 'PUT' : 'POST';
+        const url = projectId 
+          ? `/api/projects?projectId=${projectId}` 
+          : '/api/projects';
+        
+        const response = await fetch(url, {
+          method,
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            projectDetails,
+            issues
+          })
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Failed to save project: ${response.status}`);
+        }
+        
+        // If this was a new project, store the ID for later use
+        if (method === 'POST') {
+          const data = await response.json();
+          setProjectId(data.projectId);
+          localStorage.setItem('currentProjectId', data.projectId);
+          console.log(`New project saved with ID: ${data.projectId}`);
+        } else {
+          console.log(`Project updated successfully: ${projectId}`);
+        }
+      }
       
       // Navigate to the report screen
       navigate('/report');
     } catch (error) {
       console.error('Error submitting form:', error);
+      Sentry.captureException(error);
       setErrors((prev) => ({
         ...prev,
         form: 'An error occurred while submitting the form. Please try again.'
@@ -123,9 +231,20 @@ export default function ProjectDetailsScreen() {
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="max-w-4xl mx-auto card p-6 flex items-center justify-center" style={{ minHeight: "50vh" }}>
+        <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-blue-500"></div>
+        <p className="ml-3 text-lg text-gray-700">Loading project details...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-4xl mx-auto card p-6">
-      <h1 className="text-2xl font-bold text-center mb-6 text-blue-800">Project Details</h1>
+      <h1 className="text-2xl font-bold text-center mb-6 text-blue-800">
+        {projectId ? 'Edit Project Details' : 'Project Details'}
+      </h1>
       
       <form onSubmit={handleSubmit}>
         <div className="space-y-6">
@@ -149,7 +268,7 @@ export default function ProjectDetailsScreen() {
                   name="projectName"
                   value={projectDetails.projectName}
                   onChange={handleProjectDetailChange}
-                  className="form-input"
+                  className="form-input box-border"
                   placeholder="Enter project name"
                 />
                 {errors.projectName && (
@@ -166,7 +285,7 @@ export default function ProjectDetailsScreen() {
                   name="formOfContract"
                   value={projectDetails.formOfContract}
                   onChange={handleProjectDetailChange}
-                  className="form-input"
+                  className="form-input box-border"
                 >
                   <option value="">Select a contract form</option>
                   {contractForms.map((form) => (
@@ -190,7 +309,7 @@ export default function ProjectDetailsScreen() {
                   value={projectDetails.projectDescription}
                   onChange={handleProjectDetailChange}
                   rows="3"
-                  className="form-input"
+                  className="form-input box-border"
                   placeholder="Briefly describe the project"
                 ></textarea>
                 {errors.projectDescription && (
@@ -207,7 +326,7 @@ export default function ProjectDetailsScreen() {
                   name="organizationRole"
                   value={projectDetails.organizationRole}
                   onChange={handleProjectDetailChange}
-                  className="form-input"
+                  className="form-input box-border"
                 >
                   <option value="">Select your role</option>
                   {organizationRoles.map((role) => (
@@ -248,7 +367,7 @@ export default function ProjectDetailsScreen() {
               <button
                 type="button"
                 onClick={addNewIssue}
-                className="btn-accent inline-flex items-center"
+                className="btn-accent inline-flex items-center cursor-pointer"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
@@ -268,7 +387,7 @@ export default function ProjectDetailsScreen() {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="btn-primary flex items-center"
+              className="btn-primary flex items-center cursor-pointer"
             >
               {isSubmitting ? (
                 <>
