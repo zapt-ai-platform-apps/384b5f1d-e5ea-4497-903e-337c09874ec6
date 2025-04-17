@@ -6,7 +6,7 @@ export default function Footer() {
       <div className="container mx-auto px-4">
         <div className="flex flex-col md:flex-row justify-between items-center">
           <div className="mb-4 md:mb-0">
-            <h2 className="text-xl font-bold mb-2 text-blue-300">Contract Assistant</h2>
+            <h2 className="text-xl font-bold mb-2 text-white">Contract Assistant</h2>
             <p className="text-gray-300 text-sm">Professional guidance for UK building contracts</p>
           </div>
           
