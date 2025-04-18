@@ -27,31 +27,22 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Missing required project details or issues' });
     }
 
-    const openai = new OpenAI({
+    const client = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
     });
 
-    // Construct the prompt for GPT-4o
+    // Construct the prompt for GPT-4.1
     const prompt = constructPrompt(projectDetails, issues);
     console.log('Sending prompt to OpenAI');
 
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        {
-          role: "system",
-          content: "You are a UK construction contract expert. Provide detailed, accurate information about construction contract clauses and recommendations based on the given scenario. Use proper formatting with clear headings and paragraphs. Do not use markdown symbols like # or * in your response. Format your text with proper headings, paragraphs, and use bold for emphasis where appropriate."
-        },
-        {
-          role: "user",
-          content: prompt
-        }
-      ],
+    const response = await client.responses.create({
+      model: "gpt-4.1",
+      input: prompt,
       temperature: 0.5,
     });
 
     console.log('Received response from OpenAI');
-    return res.status(200).json({ report: response.choices[0].message.content });
+    return res.status(200).json({ report: response.output_text });
   } catch (error) {
     console.error('Error in generateReport:', error);
     Sentry.captureException(error);
@@ -62,7 +53,9 @@ export default async function handler(req, res) {
 function constructPrompt(projectDetails, issues) {
   const { projectName, projectDescription, formOfContract, organizationRole } = projectDetails;
 
-  let prompt = `Please analyze the following construction contract issue and provide detailed guidance:
+  let prompt = `You are a UK construction contract expert. Provide detailed, accurate information about construction contract clauses and recommendations based on the given scenario. Use proper formatting with clear headings and paragraphs. Do not use markdown symbols like # or * in your response. Format your text with proper headings, paragraphs, and use bold for emphasis where appropriate.
+
+Please analyze the following construction contract issue and provide detailed guidance:
 
 Project Name: ${projectName}
 Project Description: ${projectDescription}

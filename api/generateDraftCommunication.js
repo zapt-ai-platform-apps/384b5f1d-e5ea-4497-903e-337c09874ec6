@@ -27,31 +27,22 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Missing required details' });
     }
 
-    const openai = new OpenAI({
+    const client = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
     });
 
-    // Construct the prompt for GPT-4o
+    // Construct the prompt for GPT-4.1
     const prompt = constructPrompt(projectDetails, issues, report);
     console.log('Sending draft communication prompt to OpenAI');
 
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        {
-          role: "system",
-          content: "You are a UK construction contract expert. Create a professional communication draft based on the details provided, written strictly from the perspective of the user's stated role. Use proper business letter formatting with clear paragraphs and proper emphasis. Do not use markdown symbols like # or * in your response. Format your text with proper headings, paragraphs, and use appropriate emphasis where needed."
-        },
-        {
-          role: "user",
-          content: prompt
-        }
-      ],
+    const response = await client.responses.create({
+      model: "gpt-4.1",
+      input: prompt,
       temperature: 0.5,
     });
 
     console.log('Received draft communication from OpenAI');
-    return res.status(200).json({ draftCommunication: response.choices[0].message.content });
+    return res.status(200).json({ draftCommunication: response.output_text });
   } catch (error) {
     console.error('Error in generateDraftCommunication:', error);
     Sentry.captureException(error);
@@ -62,7 +53,9 @@ export default async function handler(req, res) {
 function constructPrompt(projectDetails, issues, report) {
   const { projectName, organizationRole, formOfContract } = projectDetails;
 
-  let prompt = `Please draft a professional communication in UK English format (formal letter or email) regarding the following construction contract issue:
+  let prompt = `You are a UK construction contract expert. Create a professional communication draft based on the details provided, written strictly from the perspective of the user's stated role. Use proper business letter formatting with clear paragraphs and proper emphasis. Do not use markdown symbols like # or * in your response. Format your text with proper headings, paragraphs, and use appropriate emphasis where needed.
+
+Please draft a professional communication in UK English format (formal letter or email) regarding the following construction contract issue:
 
 Project Name: ${projectName}
 Organization Role: ${organizationRole} (THIS IS YOUR ROLE - YOU ARE WRITING AS THIS ROLE)
